@@ -146,6 +146,7 @@ class ExtractSettlements(object):
 
         with arcpy.da.SearchCursor(self.fc_primary_settlements, self.primary_fields) as cursor:
             for primary_settlement in cursor:
+
                 if primary_settlement[1] is None:
                     arcpy.AddWarning("No settlement name for input feature with ObjectID : {0}".format(primary_settlement[18]))
                     primary_settlement = cursor.next()
@@ -195,7 +196,7 @@ class ExtractSettlements(object):
                 dn_row.setValue("src_guid",_primary_guid)
                 # Alternative names
                 if len(settlement_names) > 1:
-                      for i in range(len(settlement_names[1:6])):
+                      for i in range(len(settlement_names[1:5])):
                         dn_row.setValue("alt_name"+ str(i+1),settlement_names[i+1])
                 if len(settlement_names) > 4:
                     arcpy.AddWarning("More than 4 alternative names for : {0} ({1})".format(settlement_names[0],str(len(settlement_names))))
