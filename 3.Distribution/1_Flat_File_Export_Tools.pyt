@@ -146,7 +146,7 @@ class ExtractSettlements(object):
             # 16. MA Verified
             # 17. MA Remarks
             # 1a. In cursor open new cursor on alternative settlements rows, sort by score (descending) (related SQL)
-        alternative_fields = ['SETTLEMENT_NAME','DATA_SOURCE','SRC_CONFIDENCE']
+        alternative_fields = ['SETTLEMENT_NAME','DATA_SOURCE','SRC_CONFIDENCE','VERIFIED','VERIFICATION_REMARKS']
 
         with arcpy.da.SearchCursor(self.fc_primary_settlements, self.primary_fields) as cursor:
             for primary_settlement in cursor:
@@ -158,6 +158,9 @@ class ExtractSettlements(object):
                 settlement_names = [primary_settlement[1].strip()]
                 uc_settlement_names = [str(primary_settlement[1]).upper()]
                 data_sources = [str(primary_settlement[12])]
+                verified = primary_settlement[11]
+
+                verification_remarks = primary_settlement[self.primary_fields.index('VERIFICATION_REMARKS')] if primary_settlement[self.primary_fields.index('VERIFICATION_REMARKS')] is not None else ''
                 if primary_settlement[14] is not None:
                     sum_confidence_score = primary_settlement[14]
                 else:
@@ -175,6 +178,11 @@ class ExtractSettlements(object):
                                 uc_settlement_names.append(str(alternative_row[0]).upper().strip())
                             if alternative_row[2] is not None:
                                 sum_confidence_score += alternative_row[2]
+                            if primary_settlement[11] == 0 and alternative_row[alternative_fields.index('VERIFIED') == 1]:
+                                verified = 1
+                            if alternative_row[alternative_fields.index('VERIFICATION_REMARKS')] is not None:
+                                verification_remarks = verification_remarks + ',' + str(alternative_fields.index('VERIFICATION_REMARKS'))
+
 
                 else:
                     arcpy.AddWarning("No SRC_GUID for input settlement with ObjectID : {0}".format(primary_settlement[18]))
@@ -191,8 +199,8 @@ class ExtractSettlements(object):
                 dn_row.setValue("temp_class",primary_settlement[9])
                 dn_row.setValue("src_lat",primary_settlement[6])
                 dn_row.setValue("src_lon",primary_settlement[7])
-                dn_row.setValue("src_verifd",primary_settlement[11])
-                dn_row.setValue("src_v_rem",primary_settlement[10])
+                dn_row.setValue("src_verifd",verified)
+                dn_row.setValue("src_v_rem",verification_remarks[:249])
                 dn_row.setValue("data_sources",', '.join(data_sources))
                 dn_row.setValue("ma_verifd",primary_settlement[16])
                 dn_row.setValue("ma_v_date",primary_settlement[15])
