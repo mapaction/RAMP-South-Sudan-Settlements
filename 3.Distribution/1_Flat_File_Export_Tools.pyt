@@ -162,7 +162,8 @@ class ExtractSettlements(object):
                 verification_remarks = []
 
                 if primary_settlement[self.primary_fields.index('VERIFICATION_REMARKS')] is not None \
-                and len(primary_settlement[self.primary_fields.index('VERIFICATION_REMARKS')].strip()) > 0:
+                and len(primary_settlement[self.primary_fields.index('VERIFICATION_REMARKS')].strip().strip(',-')) > 0 \
+                and primary_settlement[self.primary_fields.index('VERIFICATION_REMARKS')].strip().upper() != 'INSIDE COUNTY':
                     verification_remarks.append(primary_settlement[self.primary_fields.index('VERIFICATION_REMARKS')].strip())
                 if primary_settlement[14] is not None:
                     sum_confidence_score = primary_settlement[14]
