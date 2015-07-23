@@ -28,7 +28,6 @@ class ExtractSettlements(object):
 
     def getParameterInfo(self):
         """Define parameter definitions"""
-        # Use for testing :
 
         # https://desktop.arcgis.com/en/desktop/latest/analyze/creating-tools/defining-parameter-data-types-in-a-python-toolbox.htm
         params_list = []
@@ -42,7 +41,7 @@ class ExtractSettlements(object):
         params_list.append(arcpy.Parameter(
         displayName="Alternative Settlements", #1
         name="fc_alternative_settlements",
-        datatype="DEFeatureClass",
+        datatype=["DEFeatureClass","DETable"],
         parameterType="Required",
         direction="Input"
         ))
