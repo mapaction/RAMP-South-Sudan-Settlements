@@ -33,41 +33,14 @@ class ExtractSettlements(object):
         # https://desktop.arcgis.com/en/desktop/latest/analyze/creating-tools/defining-parameter-data-types-in-a-python-toolbox.htm
         params_list = []
         params_list.append(arcpy.Parameter(
-        displayName="Workspace",
-        name="workspace",
-        datatype="DEWorkspace",
-        parameterType="Optional",
-        enabled=False,
-        direction="Input" ))
-        #valueAsText=default_workspace
-
-        params_list.append(arcpy.Parameter(
-        displayName="Primary Settlements", #1
+        displayName="Primary Settlements", #0
         name="fc_primary_settlements",
         datatype="DEFeatureClass",
         parameterType="Required",
         direction="Input"))
-        #     valueAsText = default_workspace + 'Primary_Settlements'
 
-##        param_fieldmap = arcpy.Parameter(
-##                            displayName="Primary Settlement Fields", #2
-##                            name="primary_fieldmap",
-##                          datatype="GPValueTable",
-##                          parameterType="Optional",
-##                          enabled=False,
-##                          multiValue = False,
-##                          direction="Input" )
-##
-##        param_fieldmap.columns = [["GPString","Settlement Field"], ["GPString","Input Field"]]
-##        _param_fieldmap_values = []
-##        for field_name in self.primary_fields:
-##            if not "@" in field_name:
-##                _param_fieldmap_values.append([field_name, None])
-##                #param_fieldmap.addRow(field_name)
-##        param_fieldmap.values = _param_fieldmap_values
-##        params_list.append(param_fieldmap)
         params_list.append(arcpy.Parameter(
-        displayName="Alternative Settlements", #2
+        displayName="Alternative Settlements", #1
         name="fc_alternative_settlements",
         datatype="DEFeatureClass",
         parameterType="Required",
@@ -101,37 +74,31 @@ class ExtractSettlements(object):
         validation is performed.  This method is called whenever a parameter
         has been changed."""
 
-
-
-            # Loop through fields on input table, and set as dropdown options (by type), on output field.
-            #parameters[2].setErrorMessage("OLDNAME - " + parameters[2].name)
-            #parameters[2].addTable(parameters[1].valueAsText)
-        #parameters[3].setErrorMessage("NAME - " + parameters[2].name)
         return
 
     def updateMessages(self, parameters):
         """Modify the messages created by internal validation for each tool
         parameter.  This method is called after internal validation."""
 
-        if parameters[1].altered:
+        if parameters[0].altered:
             # Check fields in Primary Feature Class
-            primary_input_fields = [f.name for f in arcpy.ListFields(parameters[1].value)]
+            primary_input_fields = [f.name for f in arcpy.ListFields(parameters[0].value)]
             primary_missing_fields = []
             for req_field in self.primary_fields:
                 if req_field.find('@') == -1 and req_field not in primary_input_fields:   #not req_field.find('@') and
                     primary_missing_fields.append(req_field)
             if len(primary_missing_fields) >=1:
-                parameters[1].setErrorMessage("Required field(s) missing: {0}".format(', '.join(primary_missing_fields)))
+                parameters[0].setErrorMessage("Required field(s) missing: {0}".format(', '.join(primary_missing_fields)))
 
-##        if parameters[2].altered:
-##            # Check fields in Alternative Table
-##            alternative_input_fields = [f.name for f in arcpy.ListFields(parameters[2].value)]
-##            alternative_missing_fields = []
-##            for req_field in self.alternative_fields:
-##                if req_field.find('@') == -1 and req_field not in alternative_input_fields:
-##                    alternative_missing_fields.append(req_field)
-##            if len(alternative_missing_fields) > 0:
-##                parameters[2].setErrorMessage("Required field(s) missing: {0}".format(', '.join(alternative_missing_fields)))
+        if parameters[1].altered:
+            # Check fields in Alternative Table
+            alternative_input_fields = [f.name for f in arcpy.ListFields(parameters[1].value)]
+            alternative_missing_fields = []
+            for req_field in self.alternative_fields:
+                if req_field.find('@') == -1 and req_field not in alternative_input_fields:
+                    alternative_missing_fields.append(req_field)
+            if len(alternative_missing_fields) > 0:
+                parameters[1].setErrorMessage("Required field(s) missing: {0}".format(', '.join(alternative_missing_fields)))
 
         return
 
@@ -236,17 +203,11 @@ class ExtractSettlements(object):
     def execute(self, parameters, messages):
         """The source code of the tool."""
         # Set instance properties from parameters :
-        self.fc_primary_settlements = parameters[1].valueAsText
-        self.fc_alternative_settlements = parameters[2].valueAsText
-        self.fc_output_layer = parameters[3].valueAsText
+        self.fc_primary_settlements = parameters[0].valueAsText
+        self.fc_alternative_settlements = parameters[1].valueAsText
+        self.fc_output_layer = parameters[2].valueAsText
 
-        # TESTING:
-        #dev_workspace = "C:/Users/andrew.kesterton/Dropbox/work/Mapaction/ss/Scripting-export/export_testing.gdb/"
-        #self.fc_primary_settlements = dev_workspace + "Primary_Settlements"
-        #self.fc_alternative_settlements = dev_workspace + "Alternative_Settlements"
-        #self.fc_output_layer = dev_workspace + "settlements_denormalised"
-
-        if parameters[4].value:
+        if parameters[3].value:
             arcpy.DeleteRows_management(self.fc_output_layer)
         self.setupProgress(parameters)
 
