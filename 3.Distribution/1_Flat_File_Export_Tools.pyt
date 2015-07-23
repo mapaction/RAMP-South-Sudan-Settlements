@@ -159,8 +159,11 @@ class ExtractSettlements(object):
                 uc_settlement_names = [str(primary_settlement[1]).upper()]
                 data_sources = [str(primary_settlement[12])]
                 verified = primary_settlement[11]
+                verification_remarks = []
 
-                verification_remarks = primary_settlement[self.primary_fields.index('VERIFICATION_REMARKS')] if primary_settlement[self.primary_fields.index('VERIFICATION_REMARKS')] is not None else ''
+                if primary_settlement[self.primary_fields.index('VERIFICATION_REMARKS')] is not None \
+                and len(primary_settlement[self.primary_fields.index('VERIFICATION_REMARKS')].strip()) > 0:
+                    verification_remarks.append(primary_settlement[self.primary_fields.index('VERIFICATION_REMARKS')].strip())
                 if primary_settlement[14] is not None:
                     sum_confidence_score = primary_settlement[14]
                 else:
@@ -180,13 +183,22 @@ class ExtractSettlements(object):
                                 sum_confidence_score += alternative_row[2]
                             if primary_settlement[11] == 0 and alternative_row[alternative_fields.index('VERIFIED') == 1]:
                                 verified = 1
-                            if alternative_row[alternative_fields.index('VERIFICATION_REMARKS')] is not None:
-                                verification_remarks = verification_remarks + ',' + str(alternative_fields.index('VERIFICATION_REMARKS'))
+                            if alternative_row[alternative_fields.index('VERIFICATION_REMARKS')] is not None \
+                            and len(alternative_row[alternative_fields.index('VERIFICATION_REMARKS')].strip().strip(',-'))>0 \
+                            and alternative_row[alternative_fields.index('VERIFICATION_REMARKS')].strip() not in verification_remarks \
+                            and alternative_row[alternative_fields.index('VERIFICATION_REMARKS')].strip().upper() != 'INSIDE COUNTY':
+                                verification_remarks.append(str(alternative_row[alternative_fields.index('VERIFICATION_REMARKS')]).strip().strip(',-'))
 
 
                 else:
                     arcpy.AddWarning("No SRC_GUID for input settlement with ObjectID : {0}".format(primary_settlement[18]))
                     _primary_guid = "" #"ObjectID-{0}".format(primary_settlement[18])
+
+                # Prepare some output values
+            #    if verification_remarks.count > 1:
+               #     verification_remarks = ', '.join(verification_remarks)[:254]
+               # else:
+                #    verification_remarks = ''
                 # Save Output Row - All primary attributes, alternative names and datasources from alternative feature class.
                 dn_row = self.output_rows.newRow()
                 dn_row.shape = primary_settlement[0] #arcpy.Point(row[1][0],row[1][1]) #
@@ -200,7 +212,7 @@ class ExtractSettlements(object):
                 dn_row.setValue("src_lat",primary_settlement[6])
                 dn_row.setValue("src_lon",primary_settlement[7])
                 dn_row.setValue("src_verifd",verified)
-                dn_row.setValue("src_v_rem",verification_remarks[:249])
+                dn_row.setValue("src_v_rem",', '.join(verification_remarks)[:249])
                 dn_row.setValue("data_sources",', '.join(data_sources))
                 dn_row.setValue("ma_verifd",primary_settlement[16])
                 dn_row.setValue("ma_v_date",primary_settlement[15])
