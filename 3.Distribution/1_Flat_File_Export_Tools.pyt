@@ -24,10 +24,7 @@ class ExtractSettlements(object):
 
     primary_fields = ['SHAPE@','SETTLEMENT_NAME','STATE_NAME','COUNTY_NAME','PAYAM_NAME','BOMA_NAME','SRC_LATITUDE','SRC_LONGITUDE',
                             'FUNCTIONAL_CLASSIFICATION','TEMPORAL_CLASSIFICATION','VERIFICATION_REMARKS','VERIFIED','DATA_SOURCE','SOURCE_GUID','SRC_CONFIDENCE','VERIFIED_DATE','MA_VERIFIED','MA_REMARKS','OID@','SHAPE@XY']
-    def checkInputFields(self):
-        """Check for necessary input fields on selection of parameters"""
-        # Runs when input primary feature class and alternative table are selected.
-        return
+    alternative_fields = ['SETTLEMENT_NAME','DATA_SOURCE','SRC_CONFIDENCE']
 
     def getParameterInfo(self):
         """Define parameter definitions"""
@@ -103,9 +100,9 @@ class ExtractSettlements(object):
         """Modify the values and properties of parameters before internal
         validation is performed.  This method is called whenever a parameter
         has been changed."""
-        # If primary has been set, then update field map parameter
-        if parameters[1].altered:
-            parameters[2].enabled = True
+
+
+
             # Loop through fields on input table, and set as dropdown options (by type), on output field.
             #parameters[2].setErrorMessage("OLDNAME - " + parameters[2].name)
             #parameters[2].addTable(parameters[1].valueAsText)
@@ -115,9 +112,31 @@ class ExtractSettlements(object):
     def updateMessages(self, parameters):
         """Modify the messages created by internal validation for each tool
         parameter.  This method is called after internal validation."""
-##        if parameters[1].altered:
-##            parameters[2].addTable(parameters[1].valueAsText)
-##        parameters[3].setErrorMessage("NAME - " + parameters[2].name)
+
+        if parameters[1].altered:
+            # Check fields in Primary Feature Class
+            primary_input_fields = [f.name for f in arcpy.ListFields(parameters[1].value)]
+            parameters[0].setWarningMessage(', '.join(primary_input_fields))
+            primary_missing_fields = []
+            for req_field in self.primary_fields:
+                parameters[2].setWarningMessage(', '.join(self.primary_fields))
+                if req_field not in primary_input_fields:   #not req_field.find('@') and
+                    primary_missing_fields.append(req_field)
+            if len(primary_missing_fields) >=1:
+                parameters[1].setErrorMessage("Required field(s) missing: {0}".format(', '.join(primary_missing_fields)))
+            else:
+                parameters[1].setWarningMessage("Warning " + str(len(primary_missing_fields)))
+
+        if parameters[2].altered:
+            # Check fields in Alternative Table
+            alternative_input_fields = [f.name for f in arcpy.ListFields(parameters[2].value)]
+            alternative_missing_fields = []
+            for req_field in self.alternative_fields:
+                if req_field.find('@') == -1 and req_field not in alternative_input_fields:
+                    alternative_missing_fields.append(req_field)
+            if len(alternative_missing_fields) > 0:
+                parameters[2].setErrorMessage("Required field(s) missing: {0}".format(', '.join(alternative_missing_fields)))
+
         return
 
     def processPrimary(self):
@@ -146,7 +165,7 @@ class ExtractSettlements(object):
             # 16. MA Verified
             # 17. MA Remarks
             # 1a. In cursor open new cursor on alternative settlements rows, sort by score (descending) (related SQL)
-        alternative_fields = ['SETTLEMENT_NAME','DATA_SOURCE','SRC_CONFIDENCE']
+
 
         with arcpy.da.SearchCursor(self.fc_primary_settlements, self.primary_fields) as cursor:
             for primary_settlement in cursor:
@@ -165,7 +184,7 @@ class ExtractSettlements(object):
                 if primary_settlement[13] is not None:
                     _primary_guid = primary_settlement[13]
                     _alt_query = """"PREFERRED_SETTLEMENT_ID" = '""" + _primary_guid + """'"""
-                    with arcpy.da.SearchCursor(self.fc_alternative_settlements, alternative_fields, _alt_query,sql_clause=(None,'ORDER BY SRC_CONFIDENCE DESC')) as alt_cursor:
+                    with arcpy.da.SearchCursor(self.fc_alternative_settlements, self.alternative_fields, _alt_query,sql_clause=(None,'ORDER BY SRC_CONFIDENCE DESC')) as alt_cursor:
                         # TODO - Also populate other fields if they are missing from the primary, e.g. State, Payam etc..
                         for alternative_row in alt_cursor:
                             if alternative_row[1] not in data_sources:
