@@ -24,6 +24,10 @@ class ExtractSettlements(object):
 
     primary_fields = ['SHAPE@','SETTLEMENT_NAME','STATE_NAME','COUNTY_NAME','PAYAM_NAME','BOMA_NAME','SRC_LATITUDE','SRC_LONGITUDE',
                             'FUNCTIONAL_CLASSIFICATION','TEMPORAL_CLASSIFICATION','VERIFICATION_REMARKS','VERIFIED','DATA_SOURCE','SOURCE_GUID','SRC_CONFIDENCE','VERIFIED_DATE','MA_VERIFIED','MA_REMARKS','OID@','SHAPE@XY']
+    def checkInputFields(self):
+        """Check for necessary input fields on selection of parameters"""
+        # Runs when input primary feature class and alternative table are selected.
+        return
 
     def getParameterInfo(self):
         """Define parameter definitions"""
