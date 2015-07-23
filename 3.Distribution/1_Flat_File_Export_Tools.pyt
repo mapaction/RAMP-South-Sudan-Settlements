@@ -116,26 +116,22 @@ class ExtractSettlements(object):
         if parameters[1].altered:
             # Check fields in Primary Feature Class
             primary_input_fields = [f.name for f in arcpy.ListFields(parameters[1].value)]
-            parameters[0].setWarningMessage(', '.join(primary_input_fields))
             primary_missing_fields = []
             for req_field in self.primary_fields:
-                parameters[2].setWarningMessage(', '.join(self.primary_fields))
-                if req_field not in primary_input_fields:   #not req_field.find('@') and
+                if req_field.find('@') == -1 and req_field not in primary_input_fields:   #not req_field.find('@') and
                     primary_missing_fields.append(req_field)
             if len(primary_missing_fields) >=1:
                 parameters[1].setErrorMessage("Required field(s) missing: {0}".format(', '.join(primary_missing_fields)))
-            else:
-                parameters[1].setWarningMessage("Warning " + str(len(primary_missing_fields)))
 
-        if parameters[2].altered:
-            # Check fields in Alternative Table
-            alternative_input_fields = [f.name for f in arcpy.ListFields(parameters[2].value)]
-            alternative_missing_fields = []
-            for req_field in self.alternative_fields:
-                if req_field.find('@') == -1 and req_field not in alternative_input_fields:
-                    alternative_missing_fields.append(req_field)
-            if len(alternative_missing_fields) > 0:
-                parameters[2].setErrorMessage("Required field(s) missing: {0}".format(', '.join(alternative_missing_fields)))
+##        if parameters[2].altered:
+##            # Check fields in Alternative Table
+##            alternative_input_fields = [f.name for f in arcpy.ListFields(parameters[2].value)]
+##            alternative_missing_fields = []
+##            for req_field in self.alternative_fields:
+##                if req_field.find('@') == -1 and req_field not in alternative_input_fields:
+##                    alternative_missing_fields.append(req_field)
+##            if len(alternative_missing_fields) > 0:
+##                parameters[2].setErrorMessage("Required field(s) missing: {0}".format(', '.join(alternative_missing_fields)))
 
         return
 
