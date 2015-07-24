@@ -39,9 +39,9 @@ class ExtractSettlements(object):
         direction="Input"))
 
         params_list.append(arcpy.Parameter(
-        displayName="Alternative Settlements", #1
+        displayName="Alternative Names", #1
         name="fc_alternative_settlements",
-        datatype=["DEFeatureClass","DETable"],
+        datatype= "DETable", #["DEFeatureClass","DETable"],
         parameterType="Required",
         direction="Input"
         ))
