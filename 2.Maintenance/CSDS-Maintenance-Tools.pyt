@@ -63,7 +63,7 @@ class PCode(object):
             # Check whether feature class has a P-Code field and set parameter 1 accordingly.
             settlement_fields = [f.name for f in arcpy.ListFields(parameters[0].value)]
             if "P_CODE" in settlement_fields and not parameters[1].altered:
-                parameters[1].value = "P_CODE"
+                parameters[1].value = "P_CODE"# This doesn't seem to validate, maybe better for user to select manually. Or change to a value list.
 
         return
 
@@ -82,7 +82,12 @@ class PCode(object):
         else:
             return os.path.dirname(workspace)
 
+    def getMaxCode(self, prefix):
+        """Returns the maximum pre-existing value for the P-codes in the settlements layer based on the given prefix. Assumes codes are [prefix]nnnn"""
 
+        # TODO Select maximum number from self.fc_settlements_layer where p_code like 'prefix%'
+
+        return 0
 
     def updatePCodes(self):
         """Update blank P-Codes based on the grid system"""
@@ -100,7 +105,7 @@ class PCode(object):
             for grid_square in grid_cursor:
                 s_grid_geometry = grid_square[0]
                 # Select max P-code value from settlements
-                max_code = 0
+                max_code = self.getMaxCode(grid_cursor[1])
                 # Select Settlements in Grid.
                 # http://gis.stackexchange.com/questions/27350/does-arcpy-have-a-spatial-search-function-for-geometry?rq=1
                 arcpy.SelectLayerByLocation_management("settlements_layer","INTERSECT",s_grid_geometry)
