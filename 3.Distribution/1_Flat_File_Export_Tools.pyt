@@ -22,9 +22,9 @@ class ExtractSettlements(object):
         self.canRunInBackground = False
 
 
-    primary_fields = ['SHAPE@','SETTLEMENT_NAME','STATE_NAME','COUNTY_NAME','PAYAM_NAME','BOMA_NAME','SRC_LATITUDE','SRC_LONGITUDE',
-                            'FUNCTIONAL_CLASSIFICATION','TEMPORAL_CLASSIFICATION','VERIFICATION_REMARKS','VERIFIED','DATA_SOURCE','SOURCE_GUID','SRC_CONFIDENCE','VERIFIED_DATE','MA_VERIFIED','MA_REMARKS','OID@','SHAPE@XY']
-    alternative_fields = ['SETTLEMENT_NAME','DATA_SOURCE','SRC_CONFIDENCE']
+    primary_fields = ['SHAPE@','NAME','STATE_NAME','COUNTY','PAYAM','BOMA','LAT','LON',
+                            'FUNC_CLASS','TEMP_CLASS','SRC_V_REM','SRC_VERIFIED','DATA_SOURCE','SRC_GUID','MA_SCORE','MA_V_DATE','MA_VERIFD','MA_REMARKS','P_CODE','OID@','SHAPE@XY']
+    alternative_fields = ['NAME','DATA_SOURCE']
 
     def getParameterInfo(self):
         """Define parameter definitions"""
@@ -107,7 +107,6 @@ class ExtractSettlements(object):
             #_count += 1
             #if (_count == 10):
             #    sys.exit()
-
             # Row fields
             # 0. Shape
             # 1. Settlement Name
@@ -126,6 +125,7 @@ class ExtractSettlements(object):
             # 15. Verified Date
             # 16. MA Verified
             # 17. MA Remarks
+            # 18. P-Code
             # 1a. In cursor open new cursor on alternative settlements rows, sort by score (descending) (related SQL)
 
 
@@ -146,7 +146,7 @@ class ExtractSettlements(object):
                 if primary_settlement[13] is not None:
                     _primary_guid = primary_settlement[13]
                     _alt_query = """"PREFERRED_SETTLEMENT_ID" = '""" + _primary_guid + """'"""
-                    with arcpy.da.SearchCursor(self.fc_alternative_settlements, self.alternative_fields, _alt_query,sql_clause=(None,'ORDER BY SRC_CONFIDENCE DESC')) as alt_cursor:
+                    with arcpy.da.SearchCursor(self.fc_alternative_settlements, self.alternative_fields, _alt_query) as alt_cursor:
                         # TODO - Also populate other fields if they are missing from the primary, e.g. State, Payam etc..
                         for alternative_row in alt_cursor:
                             if alternative_row[1] not in data_sources:
@@ -154,8 +154,6 @@ class ExtractSettlements(object):
                             if alternative_row[0] is not None and str(alternative_row[0]).strip().upper() not in uc_settlement_names:
                                 settlement_names.append(alternative_row[0].strip())
                                 uc_settlement_names.append(str(alternative_row[0]).upper().strip())
-                            if alternative_row[2] is not None:
-                                sum_confidence_score += alternative_row[2]
 
                 else:
                     arcpy.AddWarning("No SRC_GUID for input settlement with ObjectID : {0}".format(primary_settlement[18]))
@@ -177,7 +175,9 @@ class ExtractSettlements(object):
                 dn_row.setValue("data_sources",', '.join(data_sources))
                 dn_row.setValue("ma_verifd",primary_settlement[16])
                 dn_row.setValue("ma_v_date",primary_settlement[15])
+                dn_row.setValue("ma_remarks",primary_settlement[17])
                 dn_row.setValue("ma_score",sum_confidence_score)
+                dn_row.setValue("p_code",primary_settlement[18])
                 dn_row.setValue("src_guid",_primary_guid)
                 # Alternative names
                 if len(settlement_names) > 1:
