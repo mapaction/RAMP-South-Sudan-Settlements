@@ -1,4 +1,6 @@
 import arcpy, os
+## Tool to apply P-Codes based on one input dataset.
+## Created by Mapaction
 
 
 class Toolbox(object):
@@ -19,6 +21,8 @@ class PCode(object):
         self.description = "Generates P-Codes for Settlements based on input grid(s)."
         self.canRunInBackground = False
 
+    NUMBER_OF_DIGITS = 4 # Number of digits for P-Code [XXnnnn] where XX is the grid identifier, and nnnn are the digits.
+    SEPARATOR = "-" # Separator between 'grid' identifier and code, could be set to an empty string ("").
     def getParameterInfo(self):
         """Define parameter definitions"""
         params = []
@@ -63,7 +67,7 @@ class PCode(object):
             # Check whether feature class has a P-Code field and set parameter 1 accordingly.
             settlement_fields = [f.name for f in arcpy.ListFields(parameters[0].value)]
             if "P_CODE" in settlement_fields and not parameters[1].altered:
-                parameters[1].value = "P_CODE"# This doesn't seem to validate, maybe better for user to select manually. Or change to a value list.
+                parameters[1].value = "P_CODE"  # This doesn't seem to validate, maybe better for user to select manually. Or change to a value list?
 
         return
 
@@ -82,50 +86,55 @@ class PCode(object):
         else:
             return os.path.dirname(workspace)
 
-    def getMaxCode(self, prefix):
-        """Returns the maximum pre-existing value for the P-codes in the settlements layer based on the given prefix. Assumes codes are [prefix]nnnn"""
+    def getNextCode(self, prefix):
+        """Returns the next value for the P-codes in the settlements layer based on the given prefix, after searching existing values. Assumes codes are [prefix]nnnn"""
         max_p_query = arcpy.AddFieldDelimiters(self.fc_settlements_layer, self.field_p_code) + " like '" + prefix + "%'"
-        max_code = 0
-        ## TODO Select maximum number from self.fc_settlements_layer where p_code like 'prefix%'
+        next_code = 1
+
         with arcpy.da.SearchCursor(self.fc_settlements_layer, [self.field_p_code], max_p_query,sql_clause=(None,'ORDER BY ' + self.field_p_code + ' DESC')) as p_code_cursor:
             for p_code in p_code_cursor:
-                if int(p_code[0][2:]) > max_code:
-                    max_code = int(p_code[0][2:])
-                    # arcpy.AddMessage("Prefix {0} Max Code : {1}".format(prefix, max_code))
-        return max_code
+                if int(p_code[0][len(prefix)+len(self.SEPARATOR):]) > next_code:
+                    next_code = int(p_code[0][len(prefix)+len(self.SEPARATOR):]) + 1
+
+        # Check whether we are running out of P-Codes
+        # Raise 10 to the precision of the code to find the maximum value+1.
+        if next_code > 10**self.NUMBER_OF_DIGITS-100:
+            arcpy.AddWarning("Running out of P-Code values for grid {0}, only 99 P-Codes left when using {1} digits.  Consider increasing the number of digits (will require manual update of existing P-Codes).".format(prefix, self.NUMBER_OF_DIGITS))
+        if next_code == 10**self.NUMBER_OF_DIGITS:
+            arcpy.AddError("No P-Code values left for grid {0} as maximum number of settlements coded already ({1}). Increase the number of digits or grid resolution to continue.".format(prefix,(next_code-1)))
+            raise Exception("P-Code Sequence Exhausted for Grid {0}".format(prefix))
+        return next_code
 
     def updatePCodes(self):
         """Update blank P-Codes based on the grid system"""
-        # Try cursor first otherwise go with spatial join (on feature layer created where P-code is null)
-        grid_fields = ["SHAPE@","GRID"]
+
+        grid_fields = ["SHAPE@","GRID"]  # TODO make the polygon ID user selectable
         settlement_fields = ["SHAPE@XY"]
         settlement_fields.append(self.field_p_code)
-        # Start Edit Session on settlements layer
-
 
         # Open search cursor on grid.
         with arcpy.da.SearchCursor(self.fc_p_code_grid, grid_fields) as grid_cursor:
             for grid_square in grid_cursor:
                 s_grid_geometry = grid_square[0]
-                # Select max P-code value from settlements
-                max_code = self.getMaxCode(grid_cursor[1])
-                cnt_total_settlements = max_code
                 # Select Settlements in Grid.
-                # http://gis.stackexchange.com/questions/27350/does-arcpy-have-a-spatial-search-function-for-geometry?rq=1
                 arcpy.SelectLayerByLocation_management("settlements_layer","INTERSECT",s_grid_geometry)
                 cnt_selected = arcpy.GetCount_management("settlements_layer")
                 if cnt_selected > 0:
-        # Open update cursor on
-                    with arcpy.da.UpdateCursor("settlements_layer", settlement_fields) as settlement_cursor:  # TODO Restrict to those needing a P-Code
+                    # Select max P-code value from settlements
+                    next_code = self.getNextCode(grid_cursor[1])
+                    # Open update cursor on Settlement Layer
+                    with arcpy.da.UpdateCursor("settlements_layer", settlement_fields) as settlement_cursor:
                         for settlement in settlement_cursor:
-                            max_code = max_code + 1
-                            settlement[1] = grid_cursor[1] + str(max_code).zfill(4)
+                            settlement[1] = grid_cursor[1] + self.SEPARATOR + str(next_code).zfill(self.NUMBER_OF_DIGITS)
                             settlement_cursor.updateRow(settlement)
+                            next_code = next_code + 1
                             arcpy.SetProgressorPosition()
-                    if (max_code > 0):
-                        cnt_total_settlements = cnt_total_settlements + max_code
-                        arcpy.AddMessage("Grid {0} contains {1} settlements".format(grid_square[1],str(max_code)))
-        arcpy.AddMessage("Total Settlements : {0}".format(str(cnt_total_settlements)))
+
+                            # Check we haven't run out of P-Codes
+                            if next_code == 10**self.NUMBER_OF_DIGITS:
+                                arcpy.AddError("No P-Code values left for grid {0} as maximum number of settlements coded already ({1}). Increase the number of digits or alter grid resolution to continue.".format(grid_cursor[1],(next_code-1)))
+                                raise Exception("P-Code Sequence Exhausted for Grid {0}".format(grid_cursor[1]))
+        arcpy.SetProgressorLabel("Saving changes...")
 
     def execute(self, parameters, messages):
         """The source code of the tool."""
@@ -133,14 +142,17 @@ class PCode(object):
         self.field_p_code =parameters[1].valueAsText
         self.fc_p_code_grid = parameters[2].valueAsText
 
-        cnt_total_settlements = 0
+        # Create feature layer for settlements that need a P Code.
         arcpy.MakeFeatureLayer_management(self.fc_settlements_layer, "settlements_layer",arcpy.AddFieldDelimiters(self.fc_settlements_layer, self.field_p_code) + " is null or " + arcpy.AddFieldDelimiters(self.fc_settlements_layer, self.field_p_code) + "= ''")
-        # Setup a progress bar
+        # Setup a progress bar based on total number of blank settlements
         _empty_count = int(arcpy.GetCount_management("settlements_layer").getOutput(0))
         if _empty_count == 0:
+            # No settlements without a code so do nothing and return.
             arcpy.AddWarning("No settlements without a P-Code.")
         else:
             arcpy.SetProgressor("step",'Calculating P-Codes...',0,_empty_count+1)
+            arcpy.AddMessage("Calculating P-Codes for {0} settlements".format(_empty_count))
+            # Start edit session and process P-Codes
             with arcpy.da.Editor(self.getWorkspace(self.fc_settlements_layer)) as edit:
                 self.updatePCodes()
 
