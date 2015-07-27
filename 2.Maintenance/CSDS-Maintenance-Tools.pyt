@@ -84,10 +84,15 @@ class PCode(object):
 
     def getMaxCode(self, prefix):
         """Returns the maximum pre-existing value for the P-codes in the settlements layer based on the given prefix. Assumes codes are [prefix]nnnn"""
-
-        # TODO Select maximum number from self.fc_settlements_layer where p_code like 'prefix%'
-
-        return 0
+        max_p_query = arcpy.AddFieldDelimiters(self.fc_settlements_layer, self.field_p_code) + " like '" + prefix + "%'"
+        max_code = 0
+        ## TODO Select maximum number from self.fc_settlements_layer where p_code like 'prefix%'
+        with arcpy.da.SearchCursor(self.fc_settlements_layer, [self.field_p_code], max_p_query,sql_clause=(None,'ORDER BY ' + self.field_p_code + ' DESC')) as p_code_cursor:
+            for p_code in p_code_cursor:
+                if int(p_code[0][2:]) > max_code:
+                    max_code = int(p_code[0][2:])
+                    # arcpy.AddMessage("Prefix {0} Max Code : {1}".format(prefix, max_code))
+        return max_code
 
     def updatePCodes(self):
         """Update blank P-Codes based on the grid system"""
@@ -95,8 +100,6 @@ class PCode(object):
         grid_fields = ["SHAPE@","GRID"]
         settlement_fields = ["SHAPE@XY"]
         settlement_fields.append(self.field_p_code)
-        cnt_total_settlements = 0
-        arcpy.MakeFeatureLayer_management(self.fc_settlements_layer, "settlements_layer")
         # Start Edit Session on settlements layer
 
 
@@ -106,6 +109,7 @@ class PCode(object):
                 s_grid_geometry = grid_square[0]
                 # Select max P-code value from settlements
                 max_code = self.getMaxCode(grid_cursor[1])
+                cnt_total_settlements = max_code
                 # Select Settlements in Grid.
                 # http://gis.stackexchange.com/questions/27350/does-arcpy-have-a-spatial-search-function-for-geometry?rq=1
                 arcpy.SelectLayerByLocation_management("settlements_layer","INTERSECT",s_grid_geometry)
@@ -117,6 +121,7 @@ class PCode(object):
                             max_code = max_code + 1
                             settlement[1] = grid_cursor[1] + str(max_code).zfill(4)
                             settlement_cursor.updateRow(settlement)
+                            arcpy.SetProgressorPosition()
                     if (max_code > 0):
                         cnt_total_settlements = cnt_total_settlements + max_code
                         arcpy.AddMessage("Grid {0} contains {1} settlements".format(grid_square[1],str(max_code)))
@@ -128,7 +133,15 @@ class PCode(object):
         self.field_p_code =parameters[1].valueAsText
         self.fc_p_code_grid = parameters[2].valueAsText
 
-        with arcpy.da.Editor(self.getWorkspace(self.fc_settlements_layer)) as edit:
-            self.updatePCodes()
+        cnt_total_settlements = 0
+        arcpy.MakeFeatureLayer_management(self.fc_settlements_layer, "settlements_layer",arcpy.AddFieldDelimiters(self.fc_settlements_layer, self.field_p_code) + " is null or " + arcpy.AddFieldDelimiters(self.fc_settlements_layer, self.field_p_code) + "= ''")
+        # Setup a progress bar
+        _empty_count = int(arcpy.GetCount_management("settlements_layer").getOutput(0))
+        if _empty_count == 0:
+            arcpy.AddWarning("No settlements without a P-Code.")
+        else:
+            arcpy.SetProgressor("step",'Calculating P-Codes...',0,_empty_count+1)
+            with arcpy.da.Editor(self.getWorkspace(self.fc_settlements_layer)) as edit:
+                self.updatePCodes()
 
         return
