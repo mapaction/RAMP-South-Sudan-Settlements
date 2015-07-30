@@ -1,4 +1,29 @@
-import arcpy
+import arcpy, os
+try:
+  from lxml import etree
+  print("running with lxml.etree")
+except ImportError:
+  try:
+    # Python 2.5
+    import xml.etree.cElementTree as etree
+    print("running with cElementTree on Python 2.5+")
+  except ImportError:
+    try:
+      # Python 2.5
+      import xml.etree.ElementTree as etree
+      print("running with ElementTree on Python 2.5+")
+    except ImportError:
+      try:
+        # normal cElementTree install
+        import cElementTree as etree
+        print("running with cElementTree")
+      except ImportError:
+        try:
+          # normal ElementTree install
+          import elementtree.ElementTree as etree
+          print("running with ElementTree")
+        except ImportError:
+          print("Failed to import ElementTree from any known place")
 
 
 class Toolbox(object):
@@ -57,6 +82,8 @@ class ExtractSettlements(object):
         p_workspace.filter.list = ["Local Database","Remote Database"] # Exclude shapefile as output format
 
         params_list.append(p_workspace)
+        # Check for a file - DENORMALISED_SCHEMA.xml one level above script path.
+        schema_file = os.path.abspath(os.path.join(os.path.dirname( __file__ ), '..', 'DENORMALISED_SCHEMA.xml'))
 
         cb_param = arcpy.Parameter(
         displayName="Output Layer Workspace Schema", #3
@@ -65,7 +92,8 @@ class ExtractSettlements(object):
         parameterType="Required",
         direction="Input")
         cb_param.filter.list = ["xml"]
-        cb_param.value = ""
+        if os.path.isfile(schema_file):
+            cb_param.value = schema_file
 
         params_list.append(cb_param)
         return params_list
@@ -205,6 +233,20 @@ class ExtractSettlements(object):
         arcpy.Delete_management("primaryTableView")
         arcpy.SetProgressor("step",'Processing Settlements...',0,self._primary_count+1)
 
+    def getFeatureClassNames(self, xml_document):
+        """ Given an ArcGIS XML workspace document returns a list of feature classes that it contains """
+        xml_document = xml_document
+        fc_list = []
+        wd_tree = etree.parse(xml_document)
+        root = wd_tree.getroot()
+
+        # 2. loop through "DatasetElement" elements with attribute "esri:DEFeatureClass"
+        fcs = root.findall(".//DatasetDefinitions//DataElement[@{http://www.w3.org/2001/XMLSchema-instance}type='esri:DEFeatureClass']")
+        for data_element in fcs:
+            for fc_name_element in data_element.findall("./Name"):
+                fc_list.append(fc_name_element.text)
+        return fc_list
+
     def execute(self, parameters, messages):
         """The source code of the tool."""
         # Set instance properties from parameters :
@@ -212,15 +254,18 @@ class ExtractSettlements(object):
         self.fc_alternative_settlements = parameters[1].valueAsText
         output_workspace = parameters[2].valueAsText # Output Workspace
         schema_file = parameters[3].valueAsText
-        arcpy.AddMessage("Creating output layer in {0}".format(output_workspace))
-        # TODO - parse XML workspace document for layer name.
-        env.workspace = output_workspace
+        arcpy.SetProgressorLabel("Creating Output Feature Class...")
+
+        arcpy.env.workspace = output_workspace
         # Execute ImportXMLWorkspaceDocument
         arcpy.ImportXMLWorkspaceDocument_management(output_workspace, schema_file, "SCHEMA_ONLY") # , config_keyword)
+        # Get output layer name
+        created_fcs = self.getFeatureClassNames(schema_file)
+        if len(created_fcs) > 1:
+            arcpy.AddError("XML Workspace document created more than one feature class: {0}".format(created_fcs))
+        self.fc_output_layer = created_fcs[0]
+        arcpy.AddMessage("Output Feature Class {0} created.".format(self.fc_output_layer))
 
-        self.fc_output_layer = "SSD_stle_pt_s3_ocha_icimg"
-        if parameters[3].value:
-            arcpy.DeleteRows_management(self.fc_output_layer)
         self.setupProgress(parameters)
 
         # TODO Change to da.insertCursor (requires field names)
