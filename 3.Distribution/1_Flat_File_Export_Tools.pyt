@@ -46,20 +46,26 @@ class ExtractSettlements(object):
         direction="Input"
         ))
 
-        params_list.append(arcpy.Parameter(
-        displayName="Output Settlements Layer",#3
+
+        p_workspace = arcpy.Parameter(
+        displayName="Output Geodatabase",#2
         name="fc_output",
-        datatype="DEFeatureClass",
+        datatype="DEWorkspace",
         parameterType="Required",
-        direction="Input"))
+        direction="Input")
+
+        p_workspace.filter.list = ["Local Database","Remote Database"] # Exclude shapefile as output format
+
+        params_list.append(p_workspace)
 
         cb_param = arcpy.Parameter(
-        displayName="Initialise output dataset", #4
-        name="b_truncate_output",
-        datatype="GPBoolean",
-        parameterType="Optional",
+        displayName="Output Layer Workspace Schema", #3
+        name="output_schema_doc",
+        datatype="DEFile",
+        parameterType="Required",
         direction="Input")
-        cb_param.value = False
+        cb_param.filter.list = ["xml"]
+        cb_param.value = ""
 
         params_list.append(cb_param)
         return params_list
@@ -204,8 +210,15 @@ class ExtractSettlements(object):
         # Set instance properties from parameters :
         self.fc_primary_settlements = parameters[0].valueAsText
         self.fc_alternative_settlements = parameters[1].valueAsText
-        self.fc_output_layer = parameters[2].valueAsText
+        output_workspace = parameters[2].valueAsText # Output Workspace
+        schema_file = parameters[3].valueAsText
+        arcpy.AddMessage("Creating output layer in {0}".format(output_workspace))
+        # TODO - parse XML workspace document for layer name.
+        env.workspace = output_workspace
+        # Execute ImportXMLWorkspaceDocument
+        arcpy.ImportXMLWorkspaceDocument_management(output_workspace, schema_file, "SCHEMA_ONLY") # , config_keyword)
 
+        self.fc_output_layer = "SSD_stle_pt_s3_ocha_icimg"
         if parameters[3].value:
             arcpy.DeleteRows_management(self.fc_output_layer)
         self.setupProgress(parameters)
