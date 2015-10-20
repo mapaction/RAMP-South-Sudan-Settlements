@@ -156,10 +156,10 @@ class ExtractSettlements(object):
             # 12. Data Source
             # 13. GUID (12)
             # 14. MA Score (13)
-            # 15. IMG Verified Date
-            # 16. IMG Verified
-            # 17. IMG Remarks
-            # 18. P-Code
+            
+            # 15. IMG Verified
+            # 16. IMG Remarks
+            # 17. P-Code
             # 1a. In cursor open new cursor on alternative settlements rows, sort by score (descending) (related SQL)
 
 
@@ -207,10 +207,10 @@ class ExtractSettlements(object):
                 dn_row.setValue("src_verifd",primary_settlement[11])
                 dn_row.setValue("src_v_rem",primary_settlement[10])
                 dn_row.setValue("data_sources",', '.join(data_sources))
-                dn_row.setValue("img_verifd",primary_settlement[16])
-                dn_row.setValue("img_remark",primary_settlement[17])
+                dn_row.setValue("img_verifd",primary_settlement[15])
+                dn_row.setValue("img_remark",primary_settlement[16])
                 dn_row.setValue("conf_score",sum_confidence_score)
-                dn_row.setValue("p_code",primary_settlement[18])
+                dn_row.setValue("p_code",primary_settlement[17])
                 dn_row.setValue("src_guid",_primary_guid)
                 # Alternative names
                 if len(settlement_names) > 1:
