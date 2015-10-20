@@ -48,7 +48,7 @@ class ExtractSettlements(object):
 
 
     primary_fields = ['SHAPE@','NAME','STATE_NAME','COUNTY','PAYAM','BOMA','LAT','LON',
-                            'FUNC_CLASS','TEMP_CLASS','SRC_V_REM','SRC_VERIFD','DATA_SOURCE','SRC_GUID','CONF_SCORE','IMG_V_DATE','IMG_VERIFD','IMG_REMARK','P_CODE','OID@','SHAPE@XY']
+                            'FUNC_CLASS','TEMP_CLASS','SRC_V_REM','SRC_VERIFD','DATA_SOURCE','SRC_GUID','CONF_SCORE','IMG_VERIFD','IMG_REMARK','P_CODE','OID@','SHAPE@XY']
     alternative_fields = ['NAME','DATA_SOURCE']
 
     def getParameterInfo(self):
@@ -208,7 +208,6 @@ class ExtractSettlements(object):
                 dn_row.setValue("src_v_rem",primary_settlement[10])
                 dn_row.setValue("data_sources",', '.join(data_sources))
                 dn_row.setValue("img_verifd",primary_settlement[16])
-                dn_row.setValue("img_v_date",primary_settlement[15])
                 dn_row.setValue("img_remark",primary_settlement[17])
                 dn_row.setValue("conf_score",sum_confidence_score)
                 dn_row.setValue("p_code",primary_settlement[18])
