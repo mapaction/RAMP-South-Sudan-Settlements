@@ -7794,7 +7794,7 @@
                 <preferred_name>OBJECTID</preferred_name>
               </field_role>
               <field_role name="AltName.KeyField">
-                <display_name>KeyField</display_name>
+                <display_name>Alternative Name</display_name>
                 <preferred_name>Name</preferred_name>
               </field_role>
             </field_roles>
@@ -7806,12 +7806,40 @@
             <query>
               <tables>
                 <table role_ref="Primary" />
-				 <table role_ref="AltName" />
               </tables>
               <fields>
                 <field ref="Shape"               field_role_ref="Primary.Shape" />
                 <field ref="ID"                  field_role_ref="Primary.ID" />
                 <field ref="PlaceName"           field_role_ref="Primary.Name" />
+                <field ref="Type"                field_role_ref="Primary.Type" />
+                <field ref="Description"         field_role_ref="Primary.Description" />
+                <field ref="Latitude"            field_role_ref="Primary.Latitude" />
+                <field ref="Longitude"           field_role_ref="Primary.Longitude" />
+                <field ref="NorthLatitude"       field_role_ref="Primary.NorthLatitude" />
+                <field ref="SouthLatitude"       field_role_ref="Primary.SouthLatitude" />
+                <field ref="WestLongitude"       field_role_ref="Primary.WestLongitude" />
+                <field ref="EastLongitude"       field_role_ref="Primary.EastLongitude" />
+                <field ref="Rank"                field_role_ref="Primary.Rank" />
+                <field ref="City"                field_role_ref="Primary.City" />
+                <field ref="County"              field_role_ref="Primary.County" />
+                <field ref="State"               field_role_ref="Primary.State" />
+                <field ref="StateAbbreviation"   field_role_ref="Primary.StateAbbreviation" />
+                <field ref="Country"             field_role_ref="Primary.Country" />
+                <field ref="CountryAbbreviation" field_role_ref="Primary.CountryAbbreviation" />
+                <field ref="User_fld"            field_role_ref="Primary.User_fld" />
+				<field ref="Alt_JoinID" field_role_ref="Primary.Alt_JoinID" />
+              </fields>
+              <selection_clause/>
+            </query>
+			            <query>
+              <tables>
+                <table role_ref="Primary" />
+				 <table role_ref="AltName" />
+              </tables>
+              <fields>
+                <field ref="Shape"               field_role_ref="Primary.Shape" />
+                <field ref="ID"                  field_role_ref="Primary.ID" />
+                <field ref="PlaceName"           field_role_ref="AltName.KeyField" />
                 <field ref="Type"                field_role_ref="Primary.Type" />
                 <field ref="Description"         field_role_ref="Primary.Description" />
                 <field ref="Latitude"            field_role_ref="Primary.Latitude" />
